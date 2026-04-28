@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'EB Garamond';
+  --font-sans: 'DM Sans';
+  --font-mono: 'DM Mono';
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #1a1a18;
+  background: #ffffff;
+}
+
+/* Typography helpers */
+.font-serif { font-family: 'EB Garamond', Georgia, serif; }
+.font-mono  { font-family: 'DM Mono', monospace; }
+
+/* Marquee animation */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Fade up animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f4faf6; }
+::-webkit-scrollbar-thumb { background: #b8d8c4; border-radius: 3px; }
+
+/* Table base */
+.table-auto th {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}
+
+/* Focus styles */
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: 2px solid #1a6b3a;
+  outline-offset: 2px;
+}
+
+/* Sidebar link active indicator */
+.sidebar-link.active {
+  background: rgba(255,255,255,0.14);
+  color: white;
+}
+
+/* Custom checkbox */
+input[type="checkbox"] {
+  accent-color: #1a6b3a;
+}
