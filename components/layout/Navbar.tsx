@@ -81,7 +81,7 @@ export default function Navbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[200] bg-green-dark/97 flex flex-col px-8 pt-20 pb-10 gap-2">
+        <div className="fixed inset-0 z-[200] bg-green flex flex-col px-8 pt-20 pb-10 gap-2">
           <button
             className="absolute top-5 right-5 text-white"
             onClick={() => setMobileOpen(false)}
