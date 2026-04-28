@@ -8,16 +8,20 @@ export default async function AdminDashboard() {
   const supabase = createServerSupabase()
 
   const [
-    { count: studentCount },
-    { data: recentStudents },
-    { data: notices },
-    { data: staffCount },
+    { count: studentCount, error: studentErr },
+    { data: recentStudents, error: recentErr },
+    { data: notices, error: noticesErr },
+    { count: staffCount, error: staffErr },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
     supabase.from('profiles').select('full_name, reg_number, class, status, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(6),
     supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(5),
     supabase.from('staff').select('*', { count: 'exact', head: true }),
   ])
+
+  if (studentErr || recentErr || noticesErr || staffErr) {
+    console.error('Dashboard data fetch error:', { studentErr, recentErr, noticesErr, staffErr })
+  }
 
   return (
     <>

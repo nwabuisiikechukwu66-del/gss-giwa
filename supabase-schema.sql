@@ -152,45 +152,37 @@ create policy "students_read_own_profile"
   on public.profiles for select
   using (auth.uid() = id);
 
+-- Helper function to check if user is admin (security definer bypasses RLS recursion)
+create or replace function public.is_admin()
+returns boolean language plpgsql security definer as $$
+begin
+  return exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+    and role = 'admin'
+  );
+end;
+$$;
+
 -- Admins can read all profiles
 create policy "admins_read_all_profiles"
   on public.profiles for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (is_admin());
 
 -- Admins can insert profiles
 create policy "admins_insert_profiles"
   on public.profiles for insert
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  with check (is_admin());
 
 -- Admins can update profiles
 create policy "admins_update_profiles"
   on public.profiles for update
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (is_admin());
 
 -- Admins can delete profiles
 create policy "admins_delete_profiles"
   on public.profiles for delete
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (is_admin());
 
 -- System trigger can insert its own profile on signup
 create policy "self_insert_own_profile"
