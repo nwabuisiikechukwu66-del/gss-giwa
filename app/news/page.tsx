@@ -51,18 +51,16 @@ export default async function NewsPage() {
             <div>
               <div className="sticky top-24">
                 <div className="bg-green-dark text-white rounded p-5 mb-5">
-                  <div className="font-mono text-[10px] tracking-widest uppercase text-white/40 mb-3">Upcoming Events</div>
-                  {[
-                    ['3rd Term Exams Begin', 'Jun 10'],
-                    ['PTA Meeting', 'May 24'],
-                    ['Inter-House Sports', 'May 30'],
-                    ['WAEC Reg. Deadline', 'May 2'],
-                  ].map(([e, d]) => (
-                    <div key={e} className="flex justify-between py-2.5 border-b border-white/10 text-[13px]">
-                      <span className="text-white/75">{e}</span>
-                      <span className="font-mono text-[11px] text-white/40">{d}</span>
+                  <div className="font-mono text-[10px] tracking-widest uppercase text-white/40 mb-3">Recent Announcements</div>
+                  {items.slice(0, 4).map((n: { id: string; title: string; created_at: string }) => (
+                    <div key={n.id} className="flex justify-between py-2.5 border-b border-white/10 text-[13px] gap-4">
+                      <span className="text-white/75 truncate">{n.title}</span>
+                      <span className="font-mono text-[11px] text-white/40 whitespace-nowrap">
+                        {new Date(n.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </span>
                     </div>
                   ))}
+                  {items.length === 0 && <div className="text-white/30 text-xs py-2">No announcements.</div>}
                 </div>
                 <div className="bg-green-light border border-rule-dark rounded p-5 text-center">
                   <div className="font-serif font-semibold text-[17px] mb-2">Student Portal</div>

@@ -2,16 +2,28 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import PublicLayout from '@/app/public/layout'
 import { Tag, NoticeCard } from '@/components/ui'
+import { createServerSupabase } from '@/lib/supabase-server'
 
 export const metadata: Metadata = { title: 'Home' }
 
-const NOTICES = [
-  { type: 'Academic', title: '3rd Term Examination Timetable Released', body: 'Examinations commence 10th June 2025. Collect timetables from your class teachers.', date: '12 May 2025' },
-  { type: 'General', title: 'PTA Meeting — Saturday 24th May 2025', body: 'All parents and guardians are invited to the PTA meeting at 10:00 AM in the school hall.', date: '8 May 2025' },
-  { type: 'Sports', title: 'Inter-House Sports Day — 30th May 2025', body: 'House captains submit team lists to the sports master by 20th May 2025.', date: '5 May 2025' },
-]
+export default async function HomePage() {
+  const supabase = createServerSupabase()
 
-export default function HomePage() {
+  // Fetch data for the live homepage
+  const [
+    { data: notices },
+    { count: studentCount },
+    { count: staffCount },
+  ] = await Promise.all([
+    supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(3),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+    supabase.from('staff').select('*', { count: 'exact', head: true }),
+  ])
+
+  const liveNotices = notices ?? []
+  const displayStudentCount = studentCount ? `${studentCount}+` : '1,200+'
+  const displayStaffCount = staffCount ? String(staffCount) : '48'
+
   return (
     <PublicLayout>
       {/* HERO */}
@@ -44,7 +56,12 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="flex flex-wrap gap-8 mt-10 pt-8 border-t border-white/10">
-                {[['1,200+','Students Enrolled'],['48','Teaching Staff'],['18','Classrooms'],['40+','Years of Service']].map(([n,l]) => (
+                {[
+                  [displayStudentCount, 'Students Enrolled'],
+                  [displayStaffCount, 'Teaching Staff'],
+                  ['18', 'Classrooms'],
+                  ['40+', 'Years of Service']
+                ].map(([n,l]) => (
                   <div key={l}>
                     <span className="font-serif font-semibold text-2xl block">{n}</span>
                     <span className="text-xs text-white/50">{l}</span>
@@ -69,13 +86,18 @@ export default function HomePage() {
       {/* MARQUEE */}
       <div className="bg-green border-y border-green-dark overflow-hidden py-3">
         <div className="flex animate-marquee gap-0 w-max">
-          {[...Array(2)].map((_, di) =>
-            ['3rd Term Examinations — 10th June 2025','PTA Meeting — 24th May 2025','Inter-House Sports Day — 30th May 2025','WAEC Registration: SS3 Students Report to Exam Office','2nd Term Results Now on Student Portal'].map((t) => (
-              <span key={`${di}-${t}`} className="whitespace-nowrap font-mono text-[13px] text-white/90 tracking-widest px-10 before:content-['◆'] before:mr-8 before:text-white/30">
-                {t}
+          {[...Array(2)].map((_, di) => (
+            <>
+              {liveNotices.map((n) => (
+                <span key={`${di}-${n.id}`} className="whitespace-nowrap font-mono text-[13px] text-white/90 tracking-widest px-10 before:content-['◆'] before:mr-8 before:text-white/30">
+                  {n.title}
+                </span>
+              ))}
+              <span key={`${di}-1`} className="whitespace-nowrap font-mono text-[13px] text-white/90 tracking-widest px-10 before:content-['◆'] before:mr-8 before:text-white/30">
+                Education for Self Reliance
               </span>
-            ))
-          )}
+            </>
+          ))}
         </div>
       </div>
 
@@ -163,7 +185,19 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="flex flex-col gap-3">
-            {NOTICES.map((n) => <NoticeCard key={n.title} {...n} />)}
+            {liveNotices.length === 0 ? (
+              <div className="text-ink-soft text-sm py-8 border border-dashed border-rule rounded text-center">No announcements at this time.</div>
+            ) : (
+              liveNotices.map((n) => (
+                <NoticeCard 
+                  key={n.id} 
+                  type={n.type} 
+                  title={n.title} 
+                  body={n.body} 
+                  date={new Date(n.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} 
+                />
+              ))
+            )}
           </div>
         </div>
       </section>

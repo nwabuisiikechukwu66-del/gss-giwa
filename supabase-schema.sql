@@ -6,7 +6,7 @@
 
 -- ── 1. PROFILES ─────────────────────────────────────────────
 -- Extends auth.users. One row per user (student or admin).
-create table public.profiles (
+create table if not exists public.profiles (
   id              uuid primary key references auth.users(id) on delete cascade,
   role            text not null default 'student' check (role in ('student', 'admin')),
   full_name       text,
@@ -32,6 +32,7 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at
   before update on public.profiles
   for each row execute procedure public.handle_updated_at();
@@ -47,13 +48,14 @@ begin
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
 
 -- ── 2. NOTICES ──────────────────────────────────────────────
-create table public.notices (
+create table if not exists public.notices (
   id          uuid primary key default gen_random_uuid(),
   type        text not null default 'General',
   title       text not null,
@@ -62,13 +64,14 @@ create table public.notices (
   updated_at  timestamptz default now()
 );
 
+drop trigger if exists notices_updated_at on public.notices;
 create trigger notices_updated_at
   before update on public.notices
   for each row execute procedure public.handle_updated_at();
 
 
 -- ── 3. RESULTS ──────────────────────────────────────────────
-create table public.results (
+create table if not exists public.results (
   id                    uuid primary key default gen_random_uuid(),
   student_id            uuid not null references public.profiles(id) on delete cascade,
   term                  text not null,                -- e.g. Second Term
@@ -82,13 +85,14 @@ create table public.results (
   updated_at            timestamptz default now()
 );
 
+drop trigger if exists results_updated_at on public.results;
 create trigger results_updated_at
   before update on public.results
   for each row execute procedure public.handle_updated_at();
 
 
 -- ── 4. RESULT SUBJECTS ──────────────────────────────────────
-create table public.result_subjects (
+create table if not exists public.result_subjects (
   id            uuid primary key default gen_random_uuid(),
   result_id     uuid not null references public.results(id) on delete cascade,
   subject_name  text not null,
@@ -101,7 +105,7 @@ create table public.result_subjects (
 
 
 -- ── 5. TIMETABLES ───────────────────────────────────────────
-create table public.timetables (
+create table if not exists public.timetables (
   id            uuid primary key default gen_random_uuid(),
   class         text not null,           -- e.g. SS2A
   period_order  integer not null,        -- 1, 2, 3… for ordering
@@ -116,7 +120,7 @@ create table public.timetables (
 
 
 -- ── 6. STAFF ────────────────────────────────────────────────
-create table public.staff (
+create table if not exists public.staff (
   id          uuid primary key default gen_random_uuid(),
   full_name   text not null,
   role        text not null,             -- e.g. Mathematics Teacher
@@ -128,6 +132,7 @@ create table public.staff (
   updated_at  timestamptz default now()
 );
 
+drop trigger if exists staff_updated_at on public.staff;
 create trigger staff_updated_at
   before update on public.staff
   for each row execute procedure public.handle_updated_at();
@@ -148,6 +153,7 @@ alter table public.staff          enable row level security;
 
 -- ── PROFILES policies ───────────────────────────────────────
 -- Students can read their own profile only
+drop policy if exists "students_read_own_profile" on public.profiles;
 create policy "students_read_own_profile"
   on public.profiles for select
   using (auth.uid() = id);
@@ -165,26 +171,31 @@ end;
 $$;
 
 -- Admins can read all profiles
+drop policy if exists "admins_read_all_profiles" on public.profiles;
 create policy "admins_read_all_profiles"
   on public.profiles for select
   using (is_admin());
 
 -- Admins can insert profiles
+drop policy if exists "admins_insert_profiles" on public.profiles;
 create policy "admins_insert_profiles"
   on public.profiles for insert
   with check (is_admin());
 
 -- Admins can update profiles
+drop policy if exists "admins_update_profiles" on public.profiles;
 create policy "admins_update_profiles"
   on public.profiles for update
   using (is_admin());
 
 -- Admins can delete profiles
+drop policy if exists "admins_delete_profiles" on public.profiles;
 create policy "admins_delete_profiles"
   on public.profiles for delete
   using (is_admin());
 
 -- System trigger can insert its own profile on signup
+drop policy if exists "self_insert_own_profile" on public.profiles;
 create policy "self_insert_own_profile"
   on public.profiles for insert
   with check (auth.uid() = id);
@@ -192,47 +203,43 @@ create policy "self_insert_own_profile"
 
 -- ── NOTICES policies ────────────────────────────────────────
 -- Anyone authenticated can read notices
+drop policy if exists "authenticated_read_notices" on public.notices;
 create policy "authenticated_read_notices"
   on public.notices for select
   using (auth.role() = 'authenticated');
 
--- Admins can insert, update, delete notices
+-- Admins can manage notices
+drop policy if exists "admins_manage_notices" on public.notices;
 create policy "admins_manage_notices"
   on public.notices for all
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  )
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ── RESULTS policies ────────────────────────────────────────
 -- Students can read their own results only
+drop policy if exists "students_read_own_results" on public.results;
 create policy "students_read_own_results"
   on public.results for select
   using (auth.uid() = student_id);
 
 -- Admins can read all results
+drop policy if exists "admins_read_all_results" on public.results;
 create policy "admins_read_all_results"
   on public.results for select
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin());
 
 -- Admins can manage results
+drop policy if exists "admins_manage_results" on public.results;
 create policy "admins_manage_results"
   on public.results for all
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  )
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ── RESULT_SUBJECTS policies ────────────────────────────────
 -- Students can read subjects for their own results
+drop policy if exists "students_read_own_subjects" on public.result_subjects;
 create policy "students_read_own_subjects"
   on public.result_subjects for select
   using (
@@ -243,48 +250,41 @@ create policy "students_read_own_subjects"
   );
 
 -- Admins can manage all subjects
+drop policy if exists "admins_manage_subjects" on public.result_subjects;
 create policy "admins_manage_subjects"
   on public.result_subjects for all
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  )
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ── TIMETABLES policies ─────────────────────────────────────
 -- All authenticated users can read timetables
+drop policy if exists "authenticated_read_timetables" on public.timetables;
 create policy "authenticated_read_timetables"
   on public.timetables for select
   using (auth.role() = 'authenticated');
 
 -- Admins can manage timetables
+drop policy if exists "admins_manage_timetables" on public.timetables;
 create policy "admins_manage_timetables"
   on public.timetables for all
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  )
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ── STAFF policies ──────────────────────────────────────────
 -- All authenticated users can read staff
+drop policy if exists "authenticated_read_staff" on public.staff;
 create policy "authenticated_read_staff"
   on public.staff for select
   using (auth.role() = 'authenticated');
 
 -- Admins can manage staff
+drop policy if exists "admins_manage_staff" on public.staff;
 create policy "admins_manage_staff"
   on public.staff for all
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  )
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ══════════════════════════════════════════════════════════════
@@ -312,7 +312,8 @@ insert into public.staff (full_name, role, department, status) values
   ('Mrs. Joy Ekezie',        'Home Economics Teacher',       'Technical',      'Active'),
   ('Mr. Gbenga Olatunji',    'Physical Education Teacher',   'Non-Teaching',   'Active'),
   ('Mrs. Blessing Ogbonna',  'Librarian',                    'Non-Teaching',   'Active'),
-  ('Mr. Haruna Musa',        'Bursar',                       'Administration', 'Active');
+  ('Mr. Haruna Musa',        'Bursar',                       'Administration', 'Active')
+on conflict do nothing;
 
 
 -- ══════════════════════════════════════════════════════════════
@@ -329,4 +330,5 @@ insert into public.timetables (class, period_order, time_slot, monday, tuesday, 
   ('SS2A', 7,  '11:40 – 12:20', 'Geography',       'Civic Education',  'Geography',       'Geography',        'Physics'),
   ('SS2A', 8,  '12:20 – 1:00',  '— Break —',       '— Break —',        '— Break —',       '— Break —',        '— Break —'),
   ('SS2A', 9,  '1:00 – 1:40',   'Civic Education', 'Geography',        'Economics',       'Biology',          'Chemistry'),
-  ('SS2A', 10, '1:40 – 2:20',   'Free Period',     'Free Period',      'Civic Education', 'Civic Education',  'Free Period');
+  ('SS2A', 10, '1:40 – 2:20',   'Free Period',     'Free Period',      'Civic Education', 'Civic Education',  'Free Period')
+on conflict do nothing;

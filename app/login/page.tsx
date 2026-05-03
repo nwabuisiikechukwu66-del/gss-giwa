@@ -19,12 +19,24 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    // Students log in with reg_number as email prefix + @gssjiwa.student
-    const email = `${regNum.trim().toLowerCase().replace(/\//g, '_')}@gssjiwa.student`
+    const normalizedReg = regNum.trim().toUpperCase()
+    
+    if (!normalizedReg) {
+      setError('Please enter your registration number.')
+      setLoading(false)
+      return
+    }
 
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    // Students log in with reg_number as email prefix + @gssjiwa.student
+    const email = `${normalizedReg.toLowerCase().replace(/\//g, '_')}@gssjiwa.student`
+
+    const { error: authError } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password 
+    })
 
     if (authError) {
+      console.error('Login error:', authError)
       setError('Invalid registration number or password. Please check and try again.')
       setLoading(false)
       return

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Badge, Button, Modal, Alert } from '@/components/ui'
 import { Plus, Search, Eye, Trash2, RefreshCw } from 'lucide-react'
+import { createStudent } from '@/app/actions/students'
 
 type Student = {
   id: string
@@ -79,43 +80,21 @@ export default function StudentsPage() {
       setAlert({ type: 'error', msg: 'Full name, registration number, and password are required.' })
       return
     }
+
+    if (form.password.length < 6) {
+      setAlert({ type: 'error', msg: 'Password must be at least 6 characters long.' })
+      return
+    }
+
     setSaving(true)
     setAlert(null)
 
-    // Create auth user — email is derived from reg_number
-    const email = `${form.reg_number.trim().toLowerCase().replace(/\//g, '_')}@gssjiwa.student`
-    const { data: authData, error: authError } = await supabase.auth.admin
-      ? { data: null, error: { message: 'Use service role on server' } }
-      : await (async () => {
-          // Fallback: use signUp (works with email confirmation disabled)
-          const res = await supabase.auth.signUp({ email, password: form.password })
-          return { data: res.data, error: res.error }
-        })()
+    const result = await createStudent(form)
 
-    if (authError && !authData?.user) {
-      // Try direct signup
-      const { data: sd, error: se } = await supabase.auth.signUp({ email, password: form.password })
-      if (se || !sd.user) {
-        setAlert({ type: 'error', msg: se?.message ?? 'Failed to create student account.' })
-        setSaving(false)
-        return
-      }
-      // Insert profile
-      const { error: pe } = await supabase.from('profiles').upsert({
-        id: sd.user.id,
-        role: 'student',
-        full_name: form.full_name.trim(),
-        reg_number: form.reg_number.trim().toUpperCase(),
-        class: form.class,
-        gender: form.gender,
-        guardian_name: form.guardian_name,
-        guardian_phone: form.guardian_phone,
-        address: form.address,
-        date_of_birth: form.date_of_birth || null,
-        session: form.session,
-        status: 'Active',
-      })
-      if (pe) { setAlert({ type: 'error', msg: pe.message }); setSaving(false); return }
+    if (result.error) {
+      setAlert({ type: 'error', msg: result.error })
+      setSaving(false)
+      return
     }
 
     setAlert({ type: 'success', msg: `Student ${form.full_name} added successfully.` })

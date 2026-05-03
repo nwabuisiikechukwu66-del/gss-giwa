@@ -19,22 +19,27 @@ export default function AdminLoginPage() {
     setError('')
     setLoading(true)
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ 
+      email: email.trim().toLowerCase(), 
+      password 
+    })
 
     if (authError) {
+      console.error('Admin login error:', authError)
       setError('Invalid credentials. Please check and try again.')
       setLoading(false)
       return
     }
 
     // Verify admin role
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    if (profileError || profile?.role !== 'admin') {
+      console.error('Role verification error:', profileError || 'Not an admin')
       await supabase.auth.signOut()
       setError('Access denied. This login is for admin staff only.')
       setLoading(false)
