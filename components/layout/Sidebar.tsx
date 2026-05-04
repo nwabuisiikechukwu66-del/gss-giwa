@@ -17,6 +17,7 @@ const STUDENT_LINKS = [
   { href: '/student/portal',    label: 'Dashboard',     Icon: LayoutDashboard },
   { href: '/student/results',   label: 'My Results',    Icon: FileText },
   { href: '/student/timetable', label: 'Timetable',     Icon: Calendar },
+  { href: '/student/resources', label: 'Resources',     Icon: BookOpen },
   { href: '/student/notices',   label: 'Notice Board',  Icon: Bell },
   { href: '/student/profile',   label: 'My Profile',    Icon: User },
 ]
@@ -26,6 +27,7 @@ const ADMIN_LINKS = [
   { href: '/admin/dashboard/students', label: 'Students',   Icon: Users },
   { href: '/admin/dashboard/results',  label: 'Results',    Icon: ClipboardList },
   { href: '/admin/dashboard/notices',  label: 'Notices',    Icon: Bell },
+  { href: '/admin/dashboard/resources', label: 'Resources', Icon: FileText },
   { href: '/admin/dashboard/staff',    label: 'Staff',      Icon: BookOpen },
 ]
 

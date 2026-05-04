@@ -138,6 +138,27 @@ create trigger staff_updated_at
   for each row execute procedure public.handle_updated_at();
 
 
+
+-- ── 7. RESOURCES (Files, Past Questions, etc.) ───────────────
+create table if not exists public.resources (
+  id            uuid primary key default gen_random_uuid(),
+  title         text not null,
+  description   text,
+  file_url      text not null,
+  file_type     text,                    -- e.g. pdf, docx, jpg
+  category      text default 'General',  -- e.g. Past Questions, Notes
+  class         text,                    -- e.g. SS2 (optional filter)
+  uploaded_by   uuid references public.profiles(id),
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+
+drop trigger if exists resources_updated_at on public.resources;
+create trigger resources_updated_at
+  before update on public.resources
+  for each row execute procedure public.handle_updated_at();
+
+
 -- ══════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY (RLS)
 -- ══════════════════════════════════════════════════════════════
@@ -149,6 +170,7 @@ alter table public.results        enable row level security;
 alter table public.result_subjects enable row level security;
 alter table public.timetables     enable row level security;
 alter table public.staff          enable row level security;
+alter table public.resources      enable row level security;
 
 
 -- ── PROFILES policies ───────────────────────────────────────
@@ -287,6 +309,21 @@ create policy "admins_manage_staff"
   with check (is_admin());
 
 
+-- ── RESOURCES policies ──────────────────────────────────────
+-- All authenticated users can read resources
+drop policy if exists "authenticated_read_resources" on public.resources;
+create policy "authenticated_read_resources"
+  on public.resources for select
+  using (auth.role() = 'authenticated');
+
+-- Admins can manage resources
+drop policy if exists "admins_manage_resources" on public.resources;
+create policy "admins_manage_resources"
+  on public.resources for all
+  using (is_admin())
+  with check (is_admin());
+
+
 -- ══════════════════════════════════════════════════════════════
 -- SEED DATA — initial staff members
 -- (Run after applying schema)
@@ -314,6 +351,35 @@ insert into public.staff (full_name, role, department, status) values
   ('Mrs. Blessing Ogbonna',  'Librarian',                    'Non-Teaching',   'Active'),
   ('Mr. Haruna Musa',        'Bursar',                       'Administration', 'Active')
 on conflict do nothing;
+
+
+-- ══════════════════════════════════════════════════════════════
+-- STORAGE BUCKET SETUP
+-- ══════════════════════════════════════════════════════════════
+
+-- Create the 'resources' bucket for school files
+insert into storage.buckets (id, name, public)
+values ('resources', 'resources', true)
+on conflict (id) do nothing;
+
+-- Policy: Allow anyone to read files from the resources bucket
+drop policy if exists "Public Access" on storage.objects;
+create policy "Public Access"
+  on storage.objects for select
+  using ( bucket_id = 'resources' );
+
+-- Policy: Allow admins to upload and manage files in the resources bucket
+drop policy if exists "Admin Manage" on storage.objects;
+create policy "Admin Manage"
+  on storage.objects for all
+  using (
+    bucket_id = 'resources' 
+    AND (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
+  )
+  with check (
+    bucket_id = 'resources' 
+    AND (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
+  );
 
 
 -- ══════════════════════════════════════════════════════════════
